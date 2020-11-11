@@ -1,0 +1,23 @@
+---
+# /etc/rancher/k3s/registries.yaml
+#mirrors:
+#  docker.io:
+#    endpoint:
+#      - "http://172.17.0.1:5000"
+#
+
+mirrors:
+  "docker.io":
+    endpoint:
+      - "https://registry-dockerio.local"
+  "quay.io":
+    endpoint:
+      - "https://registry-quayio.local"
+
+configs:
+  "registry-dockerio.local":
+    tls:
+      ca_file: "/etc/ssl/certs/Registry_Root_CA.pem"
+  "registry-quayio.local":
+    tls:
+      ca_file: "/etc/ssl/certs/Registry_Root_CA.pem"

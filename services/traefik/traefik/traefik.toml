@@ -1,0 +1,23 @@
+[entryPoints]
+  [entryPoints.web]
+    address = ":80"
+
+  [entryPoints.websecure]
+    address = ":443"
+
+[providers]
+  [providers.file]
+    directory = "/etc/traefik/dynamic"
+    watch = true
+
+  [providers.docker]
+    exposedByDefault = false
+
+[api]
+  dashboard = true
+  insecure = true
+
+#[metrics]
+#  [metrics.prometheus]
+
+[accessLog]

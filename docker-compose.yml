@@ -1,0 +1,128 @@
+version: "3.8"
+
+# https://github.com/rancher/k3d/issues/238#issuecomment-627290563
+
+services:
+  registry:
+    image: "traefik:latest"
+    restart: "always"
+    ports:
+      - "8080:80"
+      - "8443:443"
+      - "9090:8080"
+    networks:
+      k3d-backend: # only this service need to be exposed
+        aliases:
+          - registry.local
+          - registry-quayio.local
+          - registry-dockerio.local
+      backend:
+        aliases:
+          - registry.local
+          - registry-quayio.local
+          - registry-dockerio.local
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./services/traefik/traefik:/etc/traefik:ro"
+      - "./services/traefik/certs:/etc/certs:ro"
+    labels:
+      - "traefik.enable=true"
+
+      # Reusable replacepath middleware
+      - "traefik.http.middlewares.replacerewithmetricspath.replacepath.path=/metrics"
+
+
+  #  registry-acme:
+  #    image: "registry:2"
+  #    restart: "always"
+  #    volumes:
+  #      - "registry:/var/lib/registry"
+  #    networks:
+  #      - "backend"
+  #    environment:
+  #      REGISTRY_PROXY_REMOTEURL: "https://registry.acme.com:443"
+  #      REGISTRY_PROXY_USERNAME: "giulio.provasi@acme.com"
+  #      REGISTRY_PROXY_PASSWORD: "mysecurepassword"
+  #
+  registry-quayio:
+    image: "registry:2"
+    restart: "always"
+    volumes:
+      - "registry-quayio:/var/lib/registry"
+      - "./services/registry/config.yml:/etc/docker/registry/config.yml:ro"
+    labels:
+      - "traefik.enable=true"
+
+      # Route registry-quayio.local to port 5000
+      - "traefik.http.routers.registry-quayio.rule=Host(`registry-quayio.local`)"
+      - "traefik.http.routers.registry-quayio.entrypoints=web,websecure"
+      - "traefik.http.routers.registry-quayio.tls=true"
+      - "traefik.http.routers.registry-quayio.service=registry-quayio"
+      - "traefik.http.services.registry-quayio.loadbalancer.server.port=5000"
+
+      # Route registry-quayio.local/metrics to port 5001
+      - "traefik.http.routers.registry-quayio-metrics.rule=Host(`registry-quayio.local`) && Path(`/metrics`)"
+      - "traefik.http.routers.registry-quayio-metrics.entrypoints=web,websecure"
+      - "traefik.http.routers.registry-quayio-metrics.tls=true"
+      - "traefik.http.routers.registry-quayio-metrics.service=registry-quayio-metrics"
+      - "traefik.http.services.registry-quayio-metrics.loadbalancer.server.port=5001"
+
+      # Route /registry/quayio/metrics to port 5001, replacepath
+      - "traefik.http.routers.registry-quayio-metrics-path.rule=Path(`/registry/quayio/metrics`)"
+      - "traefik.http.routers.registry-quayio-metrics-path.entrypoints=web"
+      - "traefik.http.routers.registry-quayio-metrics-path.service=registry-quayio-metrics"
+      - "traefik.http.routers.registry-quayio-metrics-path.middlewares=replacerewithmetricspath"
+    networks:
+      backend:
+    environment:
+      REGISTRY_PROXY_REMOTEURL: "https://quay.io/repository"
+      #REGISTRY_COMPATIBILITY_SCHEMA1_ENABLED: "true"
+
+  registry-dockerio:
+    image: "registry:2"
+    restart: "always"
+    volumes:
+      - "registry-dockerio:/var/lib/registry"
+      - "./services/registry/config.yml:/etc/docker/registry/config.yml:ro"
+    labels:
+      - "traefik.enable=true"
+
+      # Route registry-dockerio.local to port 5000
+      - "traefik.http.routers.registry-dockerio.rule=Host(`registry-dockerio.local`)"
+      - "traefik.http.routers.registry-dockerio.entrypoints=web,websecure"
+      - "traefik.http.routers.registry-dockerio.tls=true"
+      - "traefik.http.routers.registry-dockerio.service=registry-dockerio"
+      - "traefik.http.services.registry-dockerio.loadbalancer.server.port=5000"
+
+      # Route registry-dockerio.local/metrics to port 5001
+      - "traefik.http.routers.registry-dockerio-metrics.rule=Host(`registry-dockerio.local`) && Path(`/metrics`)"
+      - "traefik.http.routers.registry-dockerio-metrics.entrypoints=web,websecure"
+      - "traefik.http.routers.registry-dockerio-metrics.tls=true"
+      - "traefik.http.routers.registry-dockerio-metrics.service=registry-dockerio-metrics"
+      - "traefik.http.services.registry-dockerio-metrics.loadbalancer.server.port=5001"
+
+      # Route /registry/dockerio/metrics to port 5001, replacepath
+      - "traefik.http.routers.registry-dockerio-metrics-path.rule=Path(`/registry/dockerio/metrics`)"
+      - "traefik.http.routers.registry-dockerio-metrics-path.entrypoints=web"
+      - "traefik.http.routers.registry-dockerio-metrics-path.service=registry-dockerio-metrics"
+      - "traefik.http.routers.registry-dockerio-metrics-path.middlewares=replacerewithmetricspath"
+
+    networks:
+      backend:
+    environment:
+      REGISTRY_PROXY_REMOTEURL: "http://registry-1.docker.io"
+
+volumes:
+  registry-quayio:
+    labels:
+      - "gpr.keep=true"
+  registry-dockerio:
+    labels:
+      - "gpr.keep=true"
+
+networks:
+  backend:
+    name: backend
+  k3d-backend:
+    name: k3d-backend
+

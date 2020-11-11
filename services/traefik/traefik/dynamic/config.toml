@@ -1,0 +1,14 @@
+# Dynamic configuration
+
+# Dynamic configuration
+
+[tls.stores]
+  [tls.stores.default]
+    [tls.stores.default.defaultCertificate]
+      certFile = "/etc/certs/_wildcard.local.pem"
+      keyFile = "/etc/certs/_wildcard.local-key.pem"
+
+[[tls.certificates]]
+  certFile = "/etc/certs/_wildcard.local.pem"
+  keyFile = "/etc/certs/_wildcard.local-key.pem"
+  stores = ["default"]
