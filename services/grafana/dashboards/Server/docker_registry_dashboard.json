@@ -1688,6 +1688,6 @@
   },
   "timezone": "",
   "title": "Docker Registry",
-  "uid": "docker-registry",
+  "uid": null,
   "version": 1
 }
