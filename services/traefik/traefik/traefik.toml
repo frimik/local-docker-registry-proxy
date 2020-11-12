@@ -17,7 +17,7 @@
   dashboard = true
   insecure = true
 
-#[metrics]
-#  [metrics.prometheus]
+[metrics]
+  [metrics.prometheus]
 
 [accessLog]
