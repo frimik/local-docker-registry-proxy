@@ -1,25 +1,7 @@
 {
-  "annotations": {
-    "list": [
-      {
-        "builtIn": 1,
-        "datasource": "Prometheus",
-        "enable": true,
-        "hide": true,
-        "iconColor": "rgba(0, 211, 255, 1)",
-        "limit": 100,
-        "name": "Annotations & Alerts",
-        "showIn": 0,
-        "type": "dashboard"
-      }
-    ]
-  },
   "description": "Traefik dashboard (data from prometheus on k8s) (based on Traefik by Thomas Cheronneau https://grafana.com/grafana/dashboards/4475)",
   "editable": true,
-  "gnetId": 12541,
   "graphTooltip": 0,
-  "id": 4,
-  "iteration": 1605153317896,
   "links": [],
   "panels": [
     {
@@ -784,8 +766,6 @@
       "30d"
     ]
   },
-  "timezone": "",
-  "title": "Traefik 2.2",
-  "uid": null,
-  "version": 3
+  "title": "Traefik",
+  "timezone": "browser"
 }

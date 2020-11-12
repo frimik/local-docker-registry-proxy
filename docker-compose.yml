@@ -4,7 +4,7 @@ version: "3.8"
 
 services:
   registry:
-    image: "traefik:latest"
+    image: "traefik:v2.3"
     container_name: traefik
     restart: "always"
     ports:
@@ -33,7 +33,7 @@ services:
       - "traefik.http.middlewares.replacerewithmetricspath.replacepath.path=/metrics"
 
   grafana:
-    image: grafana/grafana
+    image: grafana/grafana:7.3.2
     container_name: grafana
     restart: always
     ports:

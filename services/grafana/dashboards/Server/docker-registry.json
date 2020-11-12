@@ -1,21 +1,6 @@
 {
-  "annotations": {
-    "list": [
-      {
-        "builtIn": 1,
-        "datasource": "-- Grafana --",
-        "enable": true,
-        "hide": true,
-        "iconColor": "rgba(0, 211, 255, 1)",
-        "name": "Annotations & Alerts",
-        "type": "dashboard"
-      }
-    ]
-  },
   "editable": true,
-  "gnetId": 9621,
   "graphTooltip": 0,
-  "iteration": 1605150123352,
   "links": [],
   "panels": [
     {
@@ -1686,8 +1671,6 @@
       "30d"
     ]
   },
-  "timezone": "",
   "title": "Docker Registry",
-  "uid": null,
-  "version": 1
+  "timezone": "browser"
 }
