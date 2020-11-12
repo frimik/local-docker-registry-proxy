@@ -5,20 +5,21 @@ version: "3.8"
 services:
   registry:
     image: "traefik:latest"
+    container_name: traefik
     restart: "always"
     ports:
-      - "8080:80"
+      - "8000:80"
       - "8443:443"
-      - "9090:8080"
+      - "8080:8080"
     networks:
       k3d-backend: # only this service need to be exposed
         aliases:
-          - registry.local
+          - traefik
           - registry-quayio.local
           - registry-dockerio.local
       backend:
         aliases:
-          - registry.local
+          - traefik
           - registry-quayio.local
           - registry-dockerio.local
     volumes:
@@ -31,6 +32,66 @@ services:
       # Reusable replacepath middleware
       - "traefik.http.middlewares.replacerewithmetricspath.replacepath.path=/metrics"
 
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    restart: always
+    ports:
+      - 3000:3000
+    volumes:
+      - "grafana:/var/lib/grafana"
+      - "./services/grafana/provisioning:/etc/grafana/provisioning:ro"
+      - "./services/grafana/dashboards:/etc/grafana/dashboards:ro"
+    labels:
+      - "traefik.enable=true"
+
+      # Define my service
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+
+      # Route grafana.local to me
+      - "traefik.http.routers.grafana.rule=Host(`grafana.local`)"
+      - "traefik.http.routers.grafana.entrypoints=web,websecure"
+      - "traefik.http.routers.grafana.tls=true"
+      - "traefik.http.routers.grafana.service=grafana"
+
+      # Set up Middleware for stripping /grafana path prefix
+      - "traefik.http.middlewares.grafana-stripprefix.stripprefix.prefixes=/grafana"
+
+      # Route /grafana to me ...
+      - "traefik.http.routers.grafana-via-path.rule=Path(`/grafana`)"
+      - "traefik.http.routers.grafana-via-path.entrypoints=web"
+      - "traefik.http.routers.grafana-via-path.service=grafana"
+      # ... but strip the prefix first
+      - "traefik.http.routers.grafana-via-path.middlewares=grafana-stripprefix"
+    networks:
+      backend:
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: always
+    ports:
+      - 9090:9090
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    volumes:
+      - "prometheus:/prometheus"
+      - "./services/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro"
+    labels:
+      - "traefik.enable=true"
+
+      # Define my service
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+
+      # Route prometheus.local to me
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.local`)"
+      - "traefik.http.routers.prometheus.entrypoints=web,websecure"
+      - "traefik.http.routers.prometheus.tls=true"
+      - "traefik.http.routers.prometheus.service=prometheus"
+
+
+    networks:
+      backend:
 
   #  registry-acme:
   #    image: "registry:2"
@@ -46,6 +107,7 @@ services:
   #
   registry-quayio:
     image: "registry:2"
+    container_name: registry-quayio
     restart: "always"
     volumes:
       - "registry-quayio:/var/lib/registry"
@@ -80,6 +142,7 @@ services:
 
   registry-dockerio:
     image: "registry:2"
+    container_name: registry-dockerio
     restart: "always"
     volumes:
       - "registry-dockerio:/var/lib/registry"
@@ -111,15 +174,17 @@ services:
       backend:
     environment:
       REGISTRY_PROXY_REMOTEURL: "http://registry-1.docker.io"
+      #REGISTRY_PROXY_USERNAME: "username"
+      #REGISTRY_PROXY_PASSWORD: "password"
 
 volumes:
   registry-quayio:
-    labels:
-      - "gpr.keep=true"
   registry-dockerio:
-    labels:
-      - "gpr.keep=true"
-
+  prometheus:
+  grafana:
+# add external: true when we decide volumes should be kept for real
+#    external: true
+      
 networks:
   backend:
     name: backend
