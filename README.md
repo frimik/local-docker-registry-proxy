@@ -5,6 +5,12 @@ files in [the proper place](services/traefik/certs) according to the filenames d
 
 ![Screenshot](screenshot.png)
 
+## Usage
+
+```sh
+docker-compose up
+```
+
 ## k3d
 
 ```sh
@@ -17,3 +23,11 @@ k3d cluster create \
     --wait \
     --network k3d-backend
 ```
+
+## Links
+
+- http://localhost:3000 - Grafana
+- http://localhost:9090 - Prometheus
+- http://localhost:8080 - Traefik
+- http://localhost:8000/registry/quayio/metrics - Prometheus metrics endpoint of `registry-quayio` instance.
+- http://localhost:8000/registry/dockerio/metrics - Prometheus metrics endpoint of `registry-dockerio` instance.
