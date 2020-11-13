@@ -1,0 +1,68 @@
+version: "3.8"
+
+services:
+  nodeexporter:
+    image: prom/node-exporter:latest
+    container_name: nodeexporter
+    restart: unless-stopped
+    expose:
+      - 9100
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - backend
+    labels:
+      org.label-schema.group: "monitoring"
+
+  cadvisor:
+    image: gcr.io/google-containers/cadvisor:latest
+    container_name: cadvisor
+    restart: unless-stopped
+    ports:
+    - 8082:8080
+    volumes:
+    - /:/rootfs:ro
+    - /var/run:/var/run:rw
+    - /sys:/sys:ro
+    - /var/lib/docker/:/var/lib/docker:ro
+    labels:
+      - "traefik.enable=true"
+
+      # Define my service
+      - "traefik.http.services.cadvisor.loadbalancer.server.port=8080"
+
+      # Route cadvisor.local to me
+      - "traefik.http.routers.cadvisor.rule=Host(`cadvisor.local`)"
+      - "traefik.http.routers.cadvisor.entrypoints=web,websecure"
+      - "traefik.http.routers.cadvisor.tls=true"
+      - "traefik.http.routers.cadvisor.service=cadvisor"
+
+      # Route /cadvisor/metrics and replacepath
+      - "traefik.http.routers.cadvisor-metrics-path.rule=Path(`/cadvisor/metrics`)"
+      - "traefik.http.routers.cadvisor-metrics-path.entrypoints=web"
+      - "traefik.http.routers.cadvisor-metrics-path.service=cadvisor"
+      - "traefik.http.routers.cadvisor-metrics-path.middlewares=replacerewithmetricspath"
+    depends_on:
+    - redis
+    networks:
+      backend:
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: unless-stopped
+    ports:
+    - 6379:6379
+    networks:
+      backend:
+      
+networks:
+  backend:
+    name: backend

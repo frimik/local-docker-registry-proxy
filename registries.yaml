@@ -13,11 +13,17 @@ mirrors:
   "quay.io":
     endpoint:
       - "https://registry-quayio.local"
+  "gcr.io":
+    endpoint:
+      - "https://registry-gcrio.local"
 
 configs:
   "registry-dockerio.local":
     tls:
       ca_file: "/etc/ssl/certs/Registry_Root_CA.pem"
   "registry-quayio.local":
+    tls:
+      ca_file: "/etc/ssl/certs/Registry_Root_CA.pem"
+  "registry-gcrio.local":
     tls:
       ca_file: "/etc/ssl/certs/Registry_Root_CA.pem"

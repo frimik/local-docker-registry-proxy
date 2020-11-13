@@ -1,12 +1,22 @@
 version: "3.8"
 
 # https://github.com/rancher/k3d/issues/238#issuecomment-627290563
+#
+# ports:
+# - 8000 - traefik "web"
+# - 8443 - traefik "websecure"
+# - 8080 - traefik
+# - 3000 - grafana
+# - 9090 - prometheus
+# - 8082 - cadvisor
+# - 6379 - redis
+# - 9100 - node-exporter
 
 services:
   registry:
     image: "traefik:v2.3"
     container_name: traefik
-    restart: "always"
+    restart: unless-stopped
     ports:
       - "8000:80"
       - "8443:443"
@@ -17,11 +27,15 @@ services:
           - traefik
           - registry-quayio.local
           - registry-dockerio.local
+          - registry-gcrio.local
+          - prometheus.local
       backend:
         aliases:
           - traefik
           - registry-quayio.local
           - registry-dockerio.local
+          - registry-gcrio.local
+          - prometheus.local
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - "./services/traefik/traefik:/etc/traefik:ro"
@@ -35,7 +49,7 @@ services:
   grafana:
     image: grafana/grafana:7.3.2
     container_name: grafana
-    restart: always
+    restart: unless-stopped
     ports:
       - 3000:3000
     volumes:
@@ -63,17 +77,21 @@ services:
       - "traefik.http.routers.grafana-via-path.service=grafana"
       # ... but strip the prefix first
       - "traefik.http.routers.grafana-via-path.middlewares=grafana-stripprefix"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
     networks:
       backend:
 
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
-    restart: always
+    restart: unless-stopped
     ports:
       - 9090:9090
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
+      - '--web.enable-lifecycle'
     volumes:
       - "prometheus:/prometheus"
       - "./services/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro"
@@ -88,27 +106,13 @@ services:
       - "traefik.http.routers.prometheus.entrypoints=web,websecure"
       - "traefik.http.routers.prometheus.tls=true"
       - "traefik.http.routers.prometheus.service=prometheus"
-
-
     networks:
       backend:
 
-  #  registry-acme:
-  #    image: "registry:2"
-  #    restart: "always"
-  #    volumes:
-  #      - "registry:/var/lib/registry"
-  #    networks:
-  #      - "backend"
-  #    environment:
-  #      REGISTRY_PROXY_REMOTEURL: "https://registry.acme.com:443"
-  #      REGISTRY_PROXY_USERNAME: "giulio.provasi@acme.com"
-  #      REGISTRY_PROXY_PASSWORD: "mysecurepassword"
-  #
   registry-quayio:
     image: "registry:2"
     container_name: registry-quayio
-    restart: "always"
+    restart: unless-stopped
     volumes:
       - "registry-quayio:/var/lib/registry"
       - "./services/registry/config.yml:/etc/docker/registry/config.yml:ro"
@@ -129,8 +133,8 @@ services:
       - "traefik.http.routers.registry-quayio-metrics.service=registry-quayio-metrics"
       - "traefik.http.services.registry-quayio-metrics.loadbalancer.server.port=5001"
 
-      # Route /registry/quayio/metrics to port 5001, replacepath
-      - "traefik.http.routers.registry-quayio-metrics-path.rule=Path(`/registry/quayio/metrics`)"
+      # Route /registry-quayio/metrics to port 5001, replacepath
+      - "traefik.http.routers.registry-quayio-metrics-path.rule=Path(`/registry-quayio/metrics`)"
       - "traefik.http.routers.registry-quayio-metrics-path.entrypoints=web"
       - "traefik.http.routers.registry-quayio-metrics-path.service=registry-quayio-metrics"
       - "traefik.http.routers.registry-quayio-metrics-path.middlewares=replacerewithmetricspath"
@@ -143,7 +147,7 @@ services:
   registry-dockerio:
     image: "registry:2"
     container_name: registry-dockerio
-    restart: "always"
+    restart: unless-stopped
     volumes:
       - "registry-dockerio:/var/lib/registry"
       - "./services/registry/config.yml:/etc/docker/registry/config.yml:ro"
@@ -164,12 +168,11 @@ services:
       - "traefik.http.routers.registry-dockerio-metrics.service=registry-dockerio-metrics"
       - "traefik.http.services.registry-dockerio-metrics.loadbalancer.server.port=5001"
 
-      # Route /registry/dockerio/metrics to port 5001, replacepath
-      - "traefik.http.routers.registry-dockerio-metrics-path.rule=Path(`/registry/dockerio/metrics`)"
+      # Route /registry-dockerio/metrics to port 5001, replacepath
+      - "traefik.http.routers.registry-dockerio-metrics-path.rule=Path(`/registry-dockerio/metrics`)"
       - "traefik.http.routers.registry-dockerio-metrics-path.entrypoints=web"
       - "traefik.http.routers.registry-dockerio-metrics-path.service=registry-dockerio-metrics"
       - "traefik.http.routers.registry-dockerio-metrics-path.middlewares=replacerewithmetricspath"
-
     networks:
       backend:
     environment:
@@ -177,9 +180,44 @@ services:
       #REGISTRY_PROXY_USERNAME: "username"
       #REGISTRY_PROXY_PASSWORD: "password"
 
+  registry-gcrio:
+    image: "registry:2"
+    container_name: registry-gcrio
+    restart: unless-stopped
+    volumes:
+      - "registry-gcrio:/var/lib/registry"
+      - "./services/registry/config.yml:/etc/docker/registry/config.yml:ro"
+    labels:
+      - "traefik.enable=true"
+
+      # Route registry-gcrio.local to port 5000
+      - "traefik.http.routers.registry-gcrio.rule=Host(`registry-gcrio.local`)"
+      - "traefik.http.routers.registry-gcrio.entrypoints=web,websecure"
+      - "traefik.http.routers.registry-gcrio.tls=true"
+      - "traefik.http.routers.registry-gcrio.service=registry-gcrio"
+      - "traefik.http.services.registry-gcrio.loadbalancer.server.port=5000"
+
+      # Route registry-gcrio.local/metrics to port 5001
+      - "traefik.http.routers.registry-gcrio-metrics.rule=Host(`registry-gcrio.local`) && Path(`/metrics`)"
+      - "traefik.http.routers.registry-gcrio-metrics.entrypoints=web,websecure"
+      - "traefik.http.routers.registry-gcrio-metrics.tls=true"
+      - "traefik.http.routers.registry-gcrio-metrics.service=registry-gcrio-metrics"
+      - "traefik.http.services.registry-gcrio-metrics.loadbalancer.server.port=5001"
+
+      # Route /registry-gcrio/metrics to port 5001, replacepath
+      - "traefik.http.routers.registry-gcrio-metrics-path.rule=Path(`/registry-gcrio/metrics`)"
+      - "traefik.http.routers.registry-gcrio-metrics-path.entrypoints=web"
+      - "traefik.http.routers.registry-gcrio-metrics-path.service=registry-gcrio-metrics"
+      - "traefik.http.routers.registry-gcrio-metrics-path.middlewares=replacerewithmetricspath"
+    networks:
+      backend:
+    environment:
+      REGISTRY_PROXY_REMOTEURL: "https://gcr.io"
+
 volumes:
   registry-quayio:
   registry-dockerio:
+  registry-gcrio:
   prometheus:
   grafana:
 # add external: true when we decide volumes should be kept for real
