@@ -1,0 +1,42 @@
+version: "3.8"
+
+services:
+  registry-local:
+    image: "registry:2"
+    container_name: registry-local
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - "registry-local:/var/lib/registry"
+      - "./services/registry/config.yml:/etc/docker/registry/config.yml:ro"
+    labels:
+      - "traefik.enable=true"
+
+      # Route registry-local.local to port 5000
+      - "traefik.http.routers.registry-local.rule=Host(`registry-local.local`)"
+      - "traefik.http.routers.registry-local.entrypoints=web,websecure"
+      - "traefik.http.routers.registry-local.tls=true"
+      - "traefik.http.routers.registry-local.service=registry-local"
+      - "traefik.http.services.registry-local.loadbalancer.server.port=5000"
+
+      # Route registry-local.local/metrics to port 5001
+      - "traefik.http.routers.registry-local-metrics.rule=Host(`registry-local.local`) && Path(`/metrics`)"
+      - "traefik.http.routers.registry-local-metrics.entrypoints=web,websecure"
+      - "traefik.http.routers.registry-local-metrics.tls=true"
+      - "traefik.http.routers.registry-local-metrics.service=registry-local-metrics"
+      - "traefik.http.services.registry-local-metrics.loadbalancer.server.port=5001"
+
+      # Route /registry-local/metrics to port 5001, replacepath
+      - "traefik.http.routers.registry-local-metrics-path.rule=Path(`/registry-local/metrics`)"
+      - "traefik.http.routers.registry-local-metrics-path.entrypoints=web"
+      - "traefik.http.routers.registry-local-metrics-path.service=registry-local-metrics"
+      - "traefik.http.routers.registry-local-metrics-path.middlewares=replacerewithmetricspath"
+    networks:
+      backend:
+
+volumes:
+  registry-local:
+# add external: true when we decide volumes should be kept for real
+#    external: true
+

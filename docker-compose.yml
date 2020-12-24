@@ -3,13 +3,14 @@ version: "3.8"
 # https://github.com/rancher/k3d/issues/238#issuecomment-627290563
 #
 # ports:
-# - 8000 - traefik "web"
-# - 8443 - traefik "websecure"
-# - 8080 - traefik
 # - 3000 - grafana
-# - 9090 - prometheus
-# - 8082 - cadvisor
+# - 5000 - registry-local docker registry
 # - 6379 - redis
+# - 8000 - traefik "web"
+# - 8080 - traefik
+# - 8082 - cadvisor
+# - 8443 - traefik "websecure"
+# - 9090 - prometheus
 # - 9100 - node-exporter
 
 services:
@@ -25,6 +26,7 @@ services:
       k3d-backend: # only this service need to be exposed
         aliases:
           - traefik
+          - registry-local.local
           - registry-quayio.local
           - registry-dockerio.local
           - registry-gcrio.local
@@ -32,6 +34,7 @@ services:
       backend:
         aliases:
           - traefik
+          - registry-local.local
           - registry-quayio.local
           - registry-dockerio.local
           - registry-gcrio.local

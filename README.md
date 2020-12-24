@@ -33,8 +33,10 @@ k3d cluster create \
 ## Links
 
 - http://localhost:3000 - Grafana
-- http://localhost:9090 - Prometheus
+- http://localhost:5000 - Local Docker Registry
 - http://localhost:8080 - Traefik
+- http://localhost:8000/registry-local/metrics - Prometheus metrics endpoint of `registry-local` instance.
 - http://localhost:8000/registry-quayio/metrics - Prometheus metrics endpoint of `registry-quayio` instance.
 - http://localhost:8000/registry-dockerio/metrics - Prometheus metrics endpoint of `registry-dockerio` instance.
 - http://localhost:8000/registry-gcrio/metrics - Prometheus metrics endpoint of `registry-dockerio` instance.
+- http://localhost:9090 - Prometheus
