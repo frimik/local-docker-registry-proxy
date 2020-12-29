@@ -145,7 +145,7 @@ services:
       backend:
     environment:
       REGISTRY_PROXY_REMOTEURL: "https://quay.io/repository"
-      #REGISTRY_COMPATIBILITY_SCHEMA1_ENABLED: "true"
+      REGISTRY_COMPATIBILITY_SCHEMA1_ENABLED: "true"
 
   registry-dockerio:
     image: "registry:2"
